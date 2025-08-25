@@ -3,7 +3,7 @@
         "admin-gateway-service": "1.36.1",
         "api-gateway-service": "1.45.0",
         "bpm-engine-service": "2.0.2+u1",
-        "workflow-engine-bpmn-diagrams": "954cd53",
+        "workflow-engine-bpmn-diagrams": "1.17.1-dev",
         "bpm-worker-service": "2.1.1",
         "credit-management-service": "1.32.0",
         "drupal-static": "0.24.0",
