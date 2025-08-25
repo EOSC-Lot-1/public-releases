@@ -17,8 +17,8 @@ do
   (
     cd code/${repoName}
     git fetch --depth=1 origin tag ${repoTag}
-    archiveName=${repoName}-${repoTag//[-+.]/_}.zip
-    git archive ${repoTag} -o ${archiveName}
+    archiveName=${repoName}-${repoTag//[-+.]/_}
+    git archive ${repoTag} -o ${bundleDir}/${archiveName}.zip
   )
 done
 
