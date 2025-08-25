@@ -2,7 +2,7 @@
     "v1.0": {
         "admin-gateway-service": "1.36.1",
         "api-gateway-service": "1.45.0",
-        "bpm-engine-service": "2.0.0",
+        "bpm-engine-service": "2.0.2+u1",
         "workflow-engine-bpmn-diagrams": "954cd53",
         "bpm-worker-service": "2.1.1",
         "credit-management-service": "1.32.0",
