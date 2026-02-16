@@ -30,7 +30,7 @@ jobs:
       - name: Bundle source repos into release-bundle.zip
         id: bundle
         run: >-
-          ./bundle.sh
+          ./bundle-artifacts.sh
 
       - name: Create GitHub Release
         env:
