@@ -39,7 +39,7 @@ jobs:
       - name: Bundle source repos into release-bundle.zip
         id: bundle
         run: >-
-          bash -x ./bundle-artifacts-with-private-dependencies.sh
+          ./bundle-artifacts-with-private-dependencies.sh
       - run: >-
           unzip -l release-bundle.zip
 
