@@ -3,7 +3,7 @@ set -ue -o pipefail
 
 #set -x
 
-declare -r githubRef=${GITHUB_REF_NAME}
+declare -r githubRef="v1.0"
 declare -r githubOwner=${GITHUB_REPOSITORY_OWNER}
 
 declare -r outputFile=release-bundle.zip
