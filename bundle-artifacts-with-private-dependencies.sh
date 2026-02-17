@@ -5,7 +5,7 @@ set -ue -o pipefail
 
 declare -r scriptName=$(basename "${BASH_SOURCE[0]}")
 
-declare -r githubRef="v1.0"
+declare -r githubRef=${GITHUB_REF_NAME}
 declare -r githubOwner=${GITHUB_REPOSITORY_OWNER}
 
 declare -r outputFile=release-bundle.zip
