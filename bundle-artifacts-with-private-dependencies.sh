@@ -31,14 +31,17 @@ _dequeue() {
   [[ -z "${item}" ]] || q[0]=$((head + 1))
 }
 
-_cloneRepo() {
+_checkoutRepo() {
     declare -r repoName=${1}
     declare -r repoTag=${2}
-    declare -n outputName=${3}
-    outputName="${repoName}-${repoTag//[-.+]/_}"
+    declare -r outputName=${3}
     [[ ! -d code/${outputName} ]] || return 0
     git clone --depth=1 https://github.com/${githubOwner}/${repoName} code/${outputName}
-    (cd code/${outputName} && git fetch --depth=1 origin tag ${repoTag})
+    (
+        cd code/${outputName}
+        git fetch --depth=1 origin tag ${repoTag}
+        git checkout ${repoTag}
+    )
 }
 
 _archiveRepo() {
@@ -50,12 +53,17 @@ _archiveRepo() {
 
 _listPrivateArtifactsForMavenProject() {
     declare -r projectDir=${1}
+    local artifactIdPattern="^[ ]+${privateArtifactGroupId//[.]/[.]}:([^:]+):jar:([^:]+):(compile)"
     [[ -f "${projectDir}/pom.xml" ]] || return 0
     (
         cd ${projectDir}
-        ./mvnw dependency:list -DoutputFile=.dependencies.txt -B 1>/dev/null
-        grep -Po -e "^[ ]+\K${privateArtifactGroupId//[.]/[.]}:([^:]+):jar:([^:]+):(compile)" .dependencies.txt |\
-          gawk -F ':' '{ printf ("%s:%s\n", $2, $4) }'
+        mvnDependencyListOutputFile=.mvn-dependency-list.out.log
+        if mvn dependency:list -DoutputFile=.dependencies.txt -B &>${mvnDependencyListOutputFile}; then
+            gawk -v pat="${artifactIdPattern}" '$0 ~ pat { print $1 }' .dependencies.txt |\
+              gawk -F ':' '{ printf ("%s:%s\n", $2, $4) }'
+        else
+            echo " *error* Failed to list dependencies in Maven project: ${projectDir}" 1>&2
+        fi
     )
 }
 
@@ -72,21 +80,24 @@ do
    _enqueue artifactQueue ${artifactName}
 done < <(jq -r --arg ref "${githubRef}" '.[$ref] | keys[] as $k | "\($k) \(.[$k])"' bundle.json)
 
-declare repoOutputName=
+declare repoFullName=
 while true; do
     _dequeue artifactQueue artifactName
     [[ -n "${artifactName}" ]] || break
     [[ -z ${artifactResolved[${artifactName}]:-} ]] || continue
-    repoName=${artifactName%:*} repoTag=${artifactName#*:} 
-    # Download private repo
+    repoName=${artifactName%:*} 
+    repoTag=${artifactName#*:} 
+    repoFullName="${repoName}-${repoTag//[-.+]/_}"
+    # checkout private repo
     echo " === $artifactName ==="
-    _cloneRepo ${repoName} ${repoTag} repoOutputName
-    _archiveRepo ${repoName} ${repoTag} ${repoOutputName}
+    _checkoutRepo ${repoName} ${repoTag} ${repoFullName}
+    _archiveRepo ${repoName} ${repoTag} ${repoFullName}
     artifactResolved[${artifactName}]=${artifactName}
-    # Fetch private dependencies
+    # enqueue private dependencies for processing
+    _listPrivateArtifactsForMavenProject code/${repoFullName} >/tmp/${repoFullName}-private-artifacts
     while read dependencyArtifactName; do
         _enqueue artifactQueue ${dependencyArtifactName}
-    done < <(_listPrivateArtifactsForMavenProject code/${repoOutputName})
+    done < /tmp/${repoFullName}-private-artifacts
 done
 
 zip -j ${outputFile} code/*.zip
