@@ -3,6 +3,8 @@ name: Release Bundler
 on: 
   workflow_dispatch:
   push:
+    branches:
+    - 'github-workflows'
     tags:
     - 'v*'
 
@@ -18,6 +20,13 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          architecture: x64
+
       - name: Configure Git
         run: |-
           git config --global --add advice.detachedHead 'false'
@@ -30,9 +39,13 @@ jobs:
       - name: Bundle source repos into release-bundle.zip
         id: bundle
         run: >-
-          ./bundle-artifacts.sh
+          bash -x ./bundle-artifacts-with-private-dependencies.sh
+      - run: >-
+          unzip -l release-bundle.zip
 
       - name: Create GitHub Release
+        if: >-
+          github.ref_type == 'tag'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |-
