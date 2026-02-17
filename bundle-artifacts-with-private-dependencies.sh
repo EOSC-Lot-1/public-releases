@@ -3,6 +3,8 @@ set -ue -o pipefail
 
 #set -x
 
+declare -r scriptName=$(basename "${BASH_SOURCE[0]}")
+
 declare -r githubRef="v1.0"
 declare -r githubOwner=${GITHUB_REPOSITORY_OWNER}
 
@@ -36,11 +38,11 @@ _checkoutRepo() {
     declare -r repoTag=${2}
     declare -r outputName=${3}
     [[ ! -d code/${outputName} ]] || return 0
-    git clone --depth=1 https://github.com/${githubOwner}/${repoName} code/${outputName}
+    git clone -q --depth=1 https://github.com/${githubOwner}/${repoName} code/${outputName}
     (
         cd code/${outputName}
-        git fetch --depth=1 origin tag ${repoTag}
-        git checkout ${repoTag}
+        git fetch -q --depth=1 origin tag ${repoTag}
+        git checkout -q ${repoTag}
     )
 }
 
@@ -59,17 +61,19 @@ _listPrivateArtifactsForMavenProject() {
         cd ${projectDir}
         mvnDependencyListOutputFile=.mvn-dependency-list.out.log
         if ! mvn dependency:list -DoutputFile=.dependencies.txt -B &>${mvnDependencyListOutputFile}; then
-            echo " *warning* mvn dependency:list reported a non-zero exit code: ${projectDir}" 1>&2
+            logger -s -t "${scriptName}" -p local7.warning \
+              '`mvn dependency:list` returned with a non-zero code: '"${projectDir}"
         fi
         if [[ -f .dependencies.txt ]]; then
             gawk -v pat="${artifactIdPattern}" '$0 ~ pat { print $1 }' .dependencies.txt |\
               gawk -F ':' '{ printf ("%s:%s\n", $2, $4) }'
         else
-            echo " *error* Failed to get dependencies of Maven project: ${projectDir}" 1>&2
+            logger -s -t "${scriptName}" -p local7.error \
+              "Failed to list dependencies of Maven project: ${projectDir}"
         fi
     )
 }
-
+    
 mkdir -vp code
 
 declare repoName=
@@ -91,12 +95,12 @@ while true; do
     repoName=${artifactName%:*} 
     repoTag=${artifactName#*:} 
     repoFullName="${repoName}-${repoTag//[-.+]/_}"
-    # checkout private repo
-    echo " === $artifactName ==="
+    # Checkout private repo
+    logger -s -t "${scriptName}" -p local7.info "Processing artifact [${artifactName}]"
     _checkoutRepo ${repoName} ${repoTag} ${repoFullName}
     _archiveRepo ${repoName} ${repoTag} ${repoFullName}
     artifactResolved[${artifactName}]=${artifactName}
-    # enqueue private dependencies for processing
+    # Enqueue private dependencies
     _listPrivateArtifactsForMavenProject code/${repoFullName} >/tmp/${repoFullName}-private-artifacts
     while read dependencyArtifactName; do
         _enqueue artifactQueue ${dependencyArtifactName}
