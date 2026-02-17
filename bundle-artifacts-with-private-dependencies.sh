@@ -63,6 +63,12 @@ _listPrivateArtifactsForMavenProject() {
         if ! mvn dependency:list -DoutputFile=.dependencies.txt -B &>${mvnDependencyListOutputFile}; then
             logger -s -t "${scriptName}" -p local7.warning \
               '`mvn dependency:list` returned with a non-zero code: '"${projectDir}"
+            # Print debug info
+            {
+                echo " -- $(realpath ${mvnDependencyListOutputFile}) -- "
+                grep -i -F -e '[error]' ${mvnDependencyListOutputFile}
+                echo " -- "
+            } 1>&2
         fi
         if [[ -f .dependencies.txt ]]; then
             gawk -v pat="${artifactIdPattern}" '$0 ~ pat { print $1 }' .dependencies.txt |\
@@ -107,4 +113,5 @@ while true; do
     done < /tmp/${repoFullName}-private-artifacts
 done
 
+logger -s -t "${scriptName}" -p local7.info "Creating bundle: ${outputFile}"
 zip -j ${outputFile} code/*.zip
