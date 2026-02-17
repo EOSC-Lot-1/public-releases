@@ -58,11 +58,14 @@ _listPrivateArtifactsForMavenProject() {
     (
         cd ${projectDir}
         mvnDependencyListOutputFile=.mvn-dependency-list.out.log
-        if mvn dependency:list -DoutputFile=.dependencies.txt -B &>${mvnDependencyListOutputFile}; then
+        if ! mvn dependency:list -DoutputFile=.dependencies.txt -B &>${mvnDependencyListOutputFile}; then
+            echo " *warning* mvn dependency:list reported a non-zero exit code: ${projectDir}" 1>&2
+        fi
+        if [[ -f .dependencies.txt ]]; then
             gawk -v pat="${artifactIdPattern}" '$0 ~ pat { print $1 }' .dependencies.txt |\
               gawk -F ':' '{ printf ("%s:%s\n", $2, $4) }'
         else
-            echo " *error* Failed to list dependencies in Maven project: ${projectDir}" 1>&2
+            echo " *error* Failed to get dependencies of Maven project: ${projectDir}" 1>&2
         fi
     )
 }
