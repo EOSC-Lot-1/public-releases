@@ -18,5 +18,25 @@
         "resource-catalogue": "v5.0.0+u117",
         "frontend-admin-dashboard": "1.1.2",
         "frontend-dynamic": "1.1.4a"
+    },
+    "v1.1": {
+        "admin-gateway-service": "1.36.1",
+        "api-gateway-service": "1.45.0",
+        "bpm-engine-service": "2.0.2+u1",
+        "workflow-engine-bpmn-diagrams": "1.17.1-dev",
+        "bpm-worker-service": "2.1.1",
+        "credit-management-service": "1.32.0",
+        "drupal-static": "0.24.0",
+        "notebook-service": "1.1.0",
+        "order-service": "1.7.5",
+        "recommender-system": "1.1.3",
+        "tools-market": "1.4.5",
+        "user-notification-service": "1.8.1",
+        "user-profile-service": "1.41.4",
+        "mkg-airflow": "1.0.9",
+        "mkg-curation": "1.0.4",
+        "resource-catalogue": "v5.0.0+u117",
+        "frontend-admin-dashboard": "1.1.2",
+        "frontend-dynamic": "1.1.4a"
     }
 }
