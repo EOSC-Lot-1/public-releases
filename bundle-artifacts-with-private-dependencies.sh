@@ -8,7 +8,9 @@ declare -r scriptName=$(basename "${BASH_SOURCE[0]}")
 declare -r githubRef=${GITHUB_REF_NAME}
 declare -r githubOwner=${GITHUB_REPOSITORY_OWNER}
 
-declare -r outputFile=release-bundle.zip
+declare -r archiveRepo=${ARCHIVE_REPO:-}
+
+declare -r outputFile=$PWD/release-bundle.zip
 
 declare -r privateArtifactGroupId="gr.athenarc.eosc"
 
@@ -17,7 +19,7 @@ declare -A artifactResolved
 
 _queue_init() {
   declare -n q=${1}
-  q[0]=1 # init head  
+  q[0]=1 # init head
 }
 
 _enqueue() {
@@ -38,19 +40,15 @@ _checkoutRepo() {
     declare -r repoTag=${2}
     declare -r outputName=${3}
     [[ ! -d code/${outputName} ]] || return 0
-    git clone -q --depth=1 https://github.com/${githubOwner}/${repoName} code/${outputName}
-    (
-        cd code/${outputName}
-        git fetch -q --depth=1 origin tag ${repoTag}
-        git checkout -q ${repoTag}
-    )
+    git clone -q --depth=1 --branch ${repoTag} \
+      https://github.com/${githubOwner}/${repoName} code/${outputName}
 }
 
 _archiveRepo() {
     declare -r repoName=${1}
     declare -r repoTag=${2}
     declare -r outputName=${3}
-    (cd code/${outputName} && git archive ${repoTag} -o ../${outputName}.zip)    
+    (cd code/${outputName} && git archive ${repoTag} -o ../${outputName}.zip)
 }
 
 _listPrivateArtifactsForMavenProject() {
@@ -79,7 +77,9 @@ _listPrivateArtifactsForMavenProject() {
         fi
     )
 }
-    
+
+## Bundle all repos ##
+
 mkdir -vp code
 
 declare repoName=
@@ -98,13 +98,13 @@ while true; do
     _dequeue artifactQueue artifactName
     [[ -n "${artifactName}" ]] || break
     [[ -z ${artifactResolved[${artifactName}]:-} ]] || continue
-    repoName=${artifactName%:*} 
-    repoTag=${artifactName#*:} 
+    repoName=${artifactName%:*}
+    repoTag=${artifactName#*:}
     repoFullName="${repoName}-${repoTag//[-.+]/_}"
     # Checkout private repo
     logger -s -t "${scriptName}" -p local7.info "Processing artifact [${artifactName}]"
     _checkoutRepo ${repoName} ${repoTag} ${repoFullName}
-    _archiveRepo ${repoName} ${repoTag} ${repoFullName}
+    [[ -z "${archiveRepo}" ]] || _archiveRepo ${repoName} ${repoTag} ${repoFullName}
     artifactResolved[${artifactName}]=${artifactName}
     # Enqueue private dependencies
     _listPrivateArtifactsForMavenProject code/${repoFullName} >/tmp/${repoFullName}-private-artifacts
@@ -114,4 +114,12 @@ while true; do
 done
 
 logger -s -t "${scriptName}" -p local7.info "Creating bundle: ${outputFile}"
-zip -j ${outputFile} code/*.zip
+
+if [[ -z "${archiveRepo}" ]]; then
+    # bundle actual git repos
+    (cd code && \
+        find . -maxdepth 1 -mindepth 1 -type d -execdir zip -q -r ${outputFile} {} \+)
+else
+    # bundle git archives
+    zip -j ${outputFile} code/*.zip
+fi
