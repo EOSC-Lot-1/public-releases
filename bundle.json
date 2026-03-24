@@ -19,7 +19,7 @@
         "frontend-admin-dashboard": "1.1.2",
         "frontend-dynamic": "1.1.4a"
     },
-    "v1.1": {
+    "v1.2": {
         "admin-gateway-service": "1.36.1",
         "api-gateway-service": "1.45.0",
         "bpm-engine-service": "2.0.2+u1",
